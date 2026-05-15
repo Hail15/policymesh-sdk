@@ -13,13 +13,15 @@ DEFAULT_API_URL = "https://policymesh-production.up.railway.app/api/v1"
 class PolicyMeshClient:
     """
     PolicyMesh Python SDK.
-    
+
     Usage:
         from policymesh import PolicyMeshClient
-        
-        client = PolicyMeshClient(org_id="your_org_id")
-        
-        # Check an action
+
+        client = PolicyMeshClient(
+            org_id="your_org_id",
+            api_key="your_api_key"
+        )
+
         decision = client.evaluate(
             agent_id="my_agent",
             action_type="data_export",
@@ -27,22 +29,22 @@ class PolicyMeshClient:
             record_count=1500,
             description="Exporting customer records"
         )
-        
-        # Or use the decorator
+
         @client.guard(action_type="production_deploy", environment="production")
         def deploy_to_production():
-            # This will be blocked if PolicyMesh says so
             pass
     """
 
     def __init__(
         self,
         org_id: str,
+        api_key: str,
         api_url: str = DEFAULT_API_URL,
         raise_on_block: bool = True,
         raise_on_escalate: bool = False
     ):
         self.org_id = org_id
+        self.api_key = api_key
         self.api_url = api_url.rstrip("/")
         self.raise_on_block = raise_on_block
         self.raise_on_escalate = raise_on_escalate
@@ -76,15 +78,29 @@ class PolicyMeshClient:
             "metadata": metadata or {}
         }
 
+        headers = {
+            "x-api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
+
         try:
             response = requests.post(
                 f"{self.api_url}/evaluate",
                 json=payload,
+                headers=headers,
                 timeout=10
             )
 
             if response.status_code == 401:
-                raise PolicyMeshAuthError("Authentication failed. Check your org_id.")
+                raise PolicyMeshAuthError(
+                    "Authentication failed. Check your api_key and org_id. "
+                    "Generate API keys at https://policymesh.vercel.app"
+                )
+
+            if response.status_code == 429:
+                raise PolicyMeshConnectionError(
+                    f"Rate limit exceeded: {response.json().get('detail', 'Monthly action limit reached.')}"
+                )
 
             if response.status_code != 200:
                 raise PolicyMeshConnectionError(
@@ -146,11 +162,10 @@ class PolicyMeshClient:
         """
         Decorator that wraps a function with PolicyMesh evaluation.
         If the action is blocked, the function will not execute.
-        
+
         Usage:
             @client.guard(action_type="production_deploy", environment="production")
             def deploy():
-                # deploy logic here
                 pass
         """
         def decorator(func):
@@ -190,4 +205,4 @@ class PolicyMeshClient:
             decision = self.evaluate(agent_id=agent_id, action_type=action_type, **kwargs)
             return decision.is_allowed or decision.is_flagged
         except Exception:
-            return True  # Fail open by default
+            return True

@@ -15,8 +15,12 @@ pip install policymesh
 ```python
 from policymesh import PolicyMeshClient
 
-# Initialize the client with your org ID
-client = PolicyMeshClient(org_id="your_org_id")
+# Initialize with your org ID and API key
+# Get your API key at https://policymesh.vercel.app → API Keys
+client = PolicyMeshClient(
+    org_id="your_org_id",
+    api_key="your_api_key"
+)
 
 # Evaluate an agent action
 decision = client.evaluate(
@@ -27,9 +31,9 @@ decision = client.evaluate(
     description="Exporting customer records to external email"
 )
 
-print(decision.decision)      # "block"
+print(decision.decision)       # "block"
 print(decision.policy_matched) # "Sensitive Data Export Block"
-print(decision.is_blocked)    # True
+print(decision.is_blocked)     # True
 ```
 
 ## Using the Guard Decorator
@@ -37,23 +41,22 @@ print(decision.is_blocked)    # True
 ```python
 from policymesh import PolicyMeshClient
 
-client = PolicyMeshClient(org_id="your_org_id")
+client = PolicyMeshClient(
+    org_id="your_org_id",
+    api_key="your_api_key"
+)
 
 @client.guard(action_type="production_deploy", environment="production")
 def deploy_to_production():
-    # This function will be blocked if PolicyMesh says so
     print("Deploying to production...")
 
-# If blocked, raises PolicyBlockedError before the function runs
 deploy_to_production()
 ```
 
 ## Simple Boolean Check
 
 ```python
-# Returns True if allowed, False if blocked
 if client.allow(agent_id="my_agent", action_type="data_access"):
-    # proceed with action
     pass
 ```
 
@@ -62,7 +65,10 @@ if client.allow(agent_id="my_agent", action_type="data_access"):
 ```python
 from policymesh import PolicyMeshClient, PolicyBlockedError, PolicyEscalateError
 
-client = PolicyMeshClient(org_id="your_org_id")
+client = PolicyMeshClient(
+    org_id="your_org_id",
+    api_key="your_api_key"
+)
 
 try:
     decision = client.evaluate(
@@ -71,7 +77,7 @@ try:
         environment="production"
     )
     if decision.is_flagged:
-        print("Action flagged but allowed. Proceeding with caution.")
+        print("Action flagged but allowed.")
 except PolicyBlockedError as e:
     print(f"Action blocked: {e.policy_matched}")
 except PolicyEscalateError as e:
@@ -83,11 +89,30 @@ except PolicyEscalateError as e:
 | Action Type | Description |
 |-------------|-------------|
 | `data_export` | Exporting data to external systems |
-| `external_email` | Sending emails to external addresses |
-| `production_deploy` | Deploying to production environments |
-| `permission_change` | Modifying user permissions or access |
-| `payment` | Processing payments or vendor actions |
 | `data_access` | Accessing sensitive data |
+| `data_delete` | Deleting data |
+| `data_modify` | Modifying data |
+| `external_email` | Sending emails to external addresses |
+| `external_message` | Sending external messages |
+| `webhook_call` | Calling webhooks |
+| `production_deploy` | Deploying to production |
+| `code_execution` | Executing code |
+| `file_read` | Reading files |
+| `file_write` | Writing files |
+| `file_delete` | Deleting files |
+| `permission_change` | Modifying permissions |
+| `auth_change` | Changing authentication |
+| `api_key_create` | Creating API keys |
+| `payment` | Processing payments |
+| `vendor_action` | Vendor operations |
+| `external_api_call` | Calling external APIs |
+| `web_browse` | Browsing the web |
+| `web_scrape` | Scraping web content |
+| `database_query` | Querying databases |
+| `database_write` | Writing to databases |
+| `database_delete` | Deleting from databases |
+| `model_call` | Calling AI models |
+| `prompt_injection` | Detected prompt injection |
 | `custom` | Custom action types |
 
 ## Data Classifications
@@ -99,8 +124,15 @@ except PolicyEscalateError as e:
 | `confidential` | Confidential business data |
 | `restricted` | Highly restricted or regulated data |
 
+## Getting Your API Key
+
+1. Sign in at [https://policymesh.vercel.app](https://policymesh.vercel.app)
+2. Go to **API Keys** in the sidebar
+3. Click **Generate Key**
+4. Copy and save your key — it is shown only once
+
 ## Links
 
 - [Dashboard](https://policymesh.vercel.app)
 - [Documentation](https://policymesh.net)
-- [GitHub](https://github.com/Hail15/policymesh)
+- [GitHub](https://github.com/Hail15/policymesh-sdk)
