@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "policymesh"
+version = "0.1.0"
+authors = [
+  { name="PolicyMesh", email="ian@policymesh.net" }
+]
+description = "Python SDK for the PolicyMesh AI Agent Control Platform"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "requests>=2.28.0"
+]
+
+[project.urls]
+"Homepage" = "https://policymesh.net"
+"Bug Tracker" = "https://github.com/Hail15/policymesh-sdk/issues"
+"Documentation" = "https://github.com/Hail15/policymesh-sdk"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["policymesh*"]
