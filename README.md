@@ -16,7 +16,7 @@ pip install policymesh
 from policymesh import PolicyMeshClient
 
 # Initialize with your org ID and API key
-# Get your API key at https://policymesh.vercel.app → API Keys
+# Get your API key at https://policymesh.net → API Keys
 client = PolicyMeshClient(
     org_id="your_org_id",
     api_key="your_api_key"
@@ -126,13 +126,13 @@ except PolicyEscalateError as e:
 
 ## Getting Your API Key
 
-1. Sign in at [https://policymesh.vercel.app](https://policymesh.vercel.app)
+1. Sign in at [https://policymesh.net](https://policymesh.net)
 2. Go to **API Keys** in the sidebar
 3. Click **Generate Key**
 4. Copy and save your key — it is shown only once
 
 ## Links
 
-- [Dashboard](https://policymesh.vercel.app)
+- [Dashboard](https://policymesh.net)
 - [Documentation](https://policymesh.net)
 - [GitHub](https://github.com/Hail15/policymesh-sdk)

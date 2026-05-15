@@ -94,7 +94,7 @@ class PolicyMeshClient:
             if response.status_code == 401:
                 raise PolicyMeshAuthError(
                     "Authentication failed. Check your api_key and org_id. "
-                    "Generate API keys at https://policymesh.vercel.app"
+                    "Generate API keys at https://policymesh.net"
                 )
 
             if response.status_code == 429:
