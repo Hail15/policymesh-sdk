@@ -1,5 +1,5 @@
 import requests
-from typing import Optional
+from typing import Optional, List
 from policymesh.models import AgentAction, PolicyDecision, Decision, ActionType, DataClassification
 from policymesh.exceptions import (
     PolicyBlockedError,
@@ -10,29 +10,83 @@ from policymesh.exceptions import (
 
 DEFAULT_API_URL = "https://policymesh-production.up.railway.app/api/v1"
 
+class TraceStep:
+    """
+    Represents a single step in an agent's execution trace.
+    
+    Usage:
+        trace = [
+            TraceStep(step=1, type="model_call", model="gpt-4", input="summarize data", output="querying db..."),
+            TraceStep(step=2, type="tool_call", tool="database_query", output="1500 records returned"),
+            TraceStep(step=3, type="action", input="export to email"),
+        ]
+    """
+    def __init__(
+        self,
+        step: int,
+        type: str,
+        timestamp: Optional[str] = None,
+        model: Optional[str] = None,
+        tool: Optional[str] = None,
+        input: Optional[str] = None,
+        output: Optional[str] = None,
+        duration_ms: Optional[int] = None,
+        metadata: Optional[dict] = None
+    ):
+        self.step = step
+        self.type = type
+        self.timestamp = timestamp
+        self.model = model
+        self.tool = tool
+        self.input = input
+        self.output = output
+        self.duration_ms = duration_ms
+        self.metadata = metadata or {}
+
+    def to_dict(self):
+        return {
+            "step": self.step,
+            "type": self.type,
+            "timestamp": self.timestamp,
+            "model": self.model,
+            "tool": self.tool,
+            "input": self.input,
+            "output": self.output,
+            "duration_ms": self.duration_ms,
+            "metadata": self.metadata
+        }
+
+
 class PolicyMeshClient:
     """
     PolicyMesh Python SDK.
 
     Usage:
-        from policymesh import PolicyMeshClient
+        from policymesh import PolicyMeshClient, TraceStep
 
         client = PolicyMeshClient(
             org_id="your_org_id",
             api_key="your_api_key"
         )
 
+        # Simple evaluation
         decision = client.evaluate(
             agent_id="my_agent",
             action_type="data_export",
             data_classification="confidential",
-            record_count=1500,
-            description="Exporting customer records"
+            record_count=1500
         )
 
-        @client.guard(action_type="production_deploy", environment="production")
-        def deploy_to_production():
-            pass
+        # With full agent trace
+        decision = client.evaluate(
+            agent_id="my_agent",
+            action_type="data_export",
+            trace=[
+                TraceStep(step=1, type="model_call", model="gpt-4", input="user asked to export data"),
+                TraceStep(step=2, type="tool_call", tool="database_query", output="1500 records found"),
+                TraceStep(step=3, type="action", input="exporting to external email"),
+            ]
+        )
     """
 
     def __init__(
@@ -58,13 +112,12 @@ class PolicyMeshClient:
         record_count: int = 0,
         destination: Optional[str] = None,
         description: Optional[str] = None,
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
+        trace: Optional[List[TraceStep]] = None
     ) -> PolicyDecision:
         """
         Evaluate an agent action against PolicyMesh policies.
-        Returns a PolicyDecision object.
-        Raises PolicyBlockedError if action is blocked and raise_on_block is True.
-        Raises PolicyEscalateError if action is escalated and raise_on_escalate is True.
+        Optionally include a trace of the agent's execution chain.
         """
         payload = {
             "agent_id": agent_id,
@@ -75,7 +128,8 @@ class PolicyMeshClient:
             "record_count": record_count,
             "destination": destination,
             "description": description,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "trace": [t.to_dict() for t in trace] if trace else []
         }
 
         headers = {
@@ -157,16 +211,12 @@ class PolicyMeshClient:
         record_count: int = 0,
         destination: Optional[str] = None,
         description: Optional[str] = None,
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
+        trace: Optional[List[TraceStep]] = None
     ):
         """
         Decorator that wraps a function with PolicyMesh evaluation.
-        If the action is blocked, the function will not execute.
-
-        Usage:
-            @client.guard(action_type="production_deploy", environment="production")
-            def deploy():
-                pass
+        Supports trace for full agent execution chain visibility.
         """
         def decorator(func):
             def wrapper(*args, **kwargs):
@@ -178,7 +228,8 @@ class PolicyMeshClient:
                     record_count=record_count,
                     destination=destination,
                     description=description or f"Calling {func.__name__}",
-                    metadata=metadata
+                    metadata=metadata,
+                    trace=trace
                 )
                 if decision.is_blocked:
                     raise PolicyBlockedError(
